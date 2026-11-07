@@ -8,11 +8,57 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Descomprimir el zip
+        run: |
+          if [ -f MandoTele-GitHub.zip ]; then unzip -o MandoTele-GitHub.zip; fi
+          ls -R . | head -50
       - name: Buscar el proyecto
         run: |
           SPEC=$(find . -name project.yml -not -path "./build/*" | head -1)
           echo "Encontrado: $SPEC"
           echo "DIR=$(dirname "$SPEC")" >> $GITHUB_ENV
+      - name: Escribir project.yml correcto
+        working-directory: ${{ env.DIR }}
+        run: |
+          rm -f Sources/Info.plist
+          cat > project.yml <<'YML'
+          name: MandoTele
+          options:
+            bundleIdPrefix: com.alex
+            deploymentTarget:
+              iOS: "16.0"
+          packages:
+            WebOSClient:
+              url: https://github.com/jareksedy/WebOSClient.git
+              from: 1.5.1
+          targets:
+            MandoTele:
+              type: application
+              platform: iOS
+              sources: [Sources]
+              dependencies:
+                - package: WebOSClient
+              settings:
+                base:
+                  PRODUCT_BUNDLE_IDENTIFIER: com.alex.MandoTele
+                  SWIFT_VERSION: "5.9"
+                  CODE_SIGNING_ALLOWED: NO
+                  CODE_SIGNING_REQUIRED: NO
+                  CODE_SIGN_IDENTITY: ""
+                  MARKETING_VERSION: "1.0"
+                  CURRENT_PROJECT_VERSION: "1"
+              info:
+                path: Info.plist
+                properties:
+                  CFBundleDisplayName: Mando
+                  UILaunchScreen: {}
+                  UIUserInterfaceStyle: Dark
+                  UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+                  NSLocalNetworkUsageDescription: "Mando necesita la red local para encontrar y controlar tu tele LG."
+                  NSAppTransportSecurity:
+                    NSAllowsLocalNetworking: true
+                    NSAllowsArbitraryLoads: true
+          YML
       - name: Instalar XcodeGen
         run: brew install xcodegen
       - name: Generar proyecto
