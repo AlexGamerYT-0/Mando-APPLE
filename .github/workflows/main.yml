@@ -73,12 +73,20 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             build 2>&1 | tail -n 80
-      - name: Crear .ipa
+      - name: Crear .ipa (con pseudo-firma ldid)
         working-directory: ${{ env.DIR }}
         run: |
+          brew install ldid
+          APP=build/Build/Products/Release-iphoneos/MandoTele.app
+          rm -rf "$APP/_CodeSignature" "$APP/embedded.mobileprovision"
+          codesign --remove-signature "$APP" || true
+          ldid -S "$APP/MandoTele"
+          plutil -p "$APP/Info.plist" | head -40
+          rm -rf Payload MandoTele.ipa
           mkdir Payload
-          cp -R build/Build/Products/Release-iphoneos/MandoTele.app Payload/
-          zip -r MandoTele.ipa Payload
+          cp -R "$APP" Payload/
+          ditto -c -k --sequesterRsrc --keepParent Payload MandoTele.ipa
+          unzip -l MandoTele.ipa | head -20
       - uses: actions/upload-artifact@v4
         with:
           name: MandoTele-ipa
