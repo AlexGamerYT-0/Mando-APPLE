@@ -3,6 +3,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: macos-latest
@@ -93,7 +95,17 @@ jobs:
           find Payload -name ".DS_Store" -delete
           zip -qry -X MandoTele.ipa Payload
           unzip -l MandoTele.ipa | head -30
+          unzip -l MandoTele.ipa | grep -q "Payload/MandoTele.app/Info.plist" && echo "IPA correcto: tiene Payload/MandoTele.app"
       - uses: actions/upload-artifact@v4
         with:
           name: MandoTele-ipa
           path: ${{ env.DIR }}/MandoTele.ipa
+      - name: Publicar el .ipa en Releases
+        working-directory: ${{ env.DIR }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "ipa-${{ github.run_number }}" MandoTele.ipa \
+            --title "MandoTele ${{ github.run_number }}" \
+            --notes "IPA sin firmar listo para firmar" \
+            --target "${{ github.sha }}"
