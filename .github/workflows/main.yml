@@ -64,31 +64,35 @@ jobs:
       - name: Generar proyecto
         working-directory: ${{ env.DIR }}
         run: xcodegen generate
-      - name: Compilar
+      - name: Compilar (archive)
         working-directory: ${{ env.DIR }}
         run: |
           set -o pipefail
-          xcodebuild -project MandoTele.xcodeproj -scheme MandoTele \
+          xcodebuild archive -project MandoTele.xcodeproj -scheme MandoTele \
             -configuration Release -sdk iphoneos \
-            -derivedDataPath build \
+            -archivePath build/MandoTele.xcarchive \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            build 2>&1 | tail -n 80
-      - name: Crear .ipa (con pseudo-firma ldid)
+            2>&1 | tail -n 80
+      - name: Crear .ipa limpio
         working-directory: ${{ env.DIR }}
         run: |
           brew install ldid
-          APP=build/Build/Products/Release-iphoneos/MandoTele.app
+          APP=build/MandoTele.xcarchive/Products/Applications/MandoTele.app
           rm -rf "$APP/_CodeSignature" "$APP/embedded.mobileprovision"
           codesign --remove-signature "$APP" || true
           ldid -S "$APP/MandoTele"
-          plutil -p "$APP/Info.plist" | head -40
+          echo "--- Info.plist ---"
+          plutil -p "$APP/Info.plist"
+          echo "--- Binario ---"
+          file "$APP/MandoTele"
+          otool -L "$APP/MandoTele" | head -20
           rm -rf Payload MandoTele.ipa
           mkdir Payload
           cp -R "$APP" Payload/
           xattr -cr Payload
           find Payload -name ".DS_Store" -delete
           zip -qry -X MandoTele.ipa Payload
-          unzip -l MandoTele.ipa | head -20
+          unzip -l MandoTele.ipa | head -30
       - uses: actions/upload-artifact@v4
         with:
           name: MandoTele-ipa
