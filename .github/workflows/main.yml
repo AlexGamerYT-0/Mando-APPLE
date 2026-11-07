@@ -8,18 +8,27 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Buscar el proyecto
+        run: |
+          SPEC=$(find . -name project.yml -not -path "./build/*" | head -1)
+          echo "Encontrado: $SPEC"
+          echo "DIR=$(dirname "$SPEC")" >> $GITHUB_ENV
       - name: Instalar XcodeGen
         run: brew install xcodegen
       - name: Generar proyecto
+        working-directory: ${{ env.DIR }}
         run: xcodegen generate
       - name: Compilar
+        working-directory: ${{ env.DIR }}
         run: |
+          set -o pipefail
           xcodebuild -project MandoTele.xcodeproj -scheme MandoTele \
             -configuration Release -sdk iphoneos \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            build
+            build 2>&1 | tail -n 80
       - name: Crear .ipa
+        working-directory: ${{ env.DIR }}
         run: |
           mkdir Payload
           cp -R build/Build/Products/Release-iphoneos/MandoTele.app Payload/
@@ -27,4 +36,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: MandoTele-ipa
-          path: MandoTele.ipa
+          path: ${{ env.DIR }}/MandoTele.ipa
