@@ -85,7 +85,9 @@ jobs:
           rm -rf Payload MandoTele.ipa
           mkdir Payload
           cp -R "$APP" Payload/
-          ditto -c -k --sequesterRsrc --keepParent Payload MandoTele.ipa
+          xattr -cr Payload
+          find Payload -name ".DS_Store" -delete
+          zip -qry -X MandoTele.ipa Payload
           unzip -l MandoTele.ipa | head -20
       - uses: actions/upload-artifact@v4
         with:
