@@ -96,6 +96,18 @@ jobs:
           zip -qry -X MandoTele.ipa Payload
           unzip -l MandoTele.ipa | head -30
           unzip -l MandoTele.ipa | grep -q "Payload/MandoTele.app/Info.plist" && echo "IPA correcto: tiene Payload/MandoTele.app"
+      - name: Compilar versión para simulador (Appetize)
+        working-directory: ${{ env.DIR }}
+        run: |
+          set -o pipefail
+          xcodebuild build -project MandoTele.xcodeproj -scheme MandoTele \
+            -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build-sim ARCHS=arm64 ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            2>&1 | tail -n 40
+          cd build-sim/Build/Products/Debug-iphonesimulator
+          zip -qry -X "$GITHUB_WORKSPACE/${DIR#./}/MandoTele-simulador.zip" MandoTele.app
       - uses: actions/upload-artifact@v4
         with:
           name: MandoTele-ipa
@@ -105,7 +117,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "ipa-${{ github.run_number }}" MandoTele.ipa \
+          gh release create "ipa-${{ github.run_number }}" MandoTele.ipa MandoTele-simulador.zip \
             --title "MandoTele ${{ github.run_number }}" \
             --notes "IPA sin firmar listo para firmar" \
             --target "${{ github.sha }}"
